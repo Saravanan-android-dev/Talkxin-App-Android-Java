@@ -4,6 +4,7 @@ import android.Manifest;
 import android.content.ContentValues;
 import android.content.Intent;
 import android.content.pm.PackageManager;
+import android.media.MediaPlayer;
 import android.net.Uri;
 import android.os.Bundle;
 import android.provider.MediaStore;
@@ -45,6 +46,8 @@ public class Chat_activity extends AppCompatActivity {
 
     static final int GALLERY_REQ = 201;
     static final int CAMERA_REQ = 202;
+    static final int VIDEO_GALLERY_REQ = 203;
+    static final int VIDEO_CAMERA_REQ = 204;
     static final int CAMERA_PERMISSION_CODE = 101;
 
     Uri cameraImageUri;
@@ -81,12 +84,12 @@ public class Chat_activity extends AppCompatActivity {
         txtChatUser.setText(receiverUsername);
 
         sendbutton.setOnClickListener(v -> sendMessage());
-        attachBtn.setOnClickListener(v -> showImagePickerDialog());
+        attachBtn.setOnClickListener(v -> showPickerDialog());
 
         listenMessages();
     }
 
-    // ================= SEND TEXT =================
+    // ================= TEXT =================
     private void sendMessage() {
 
         String msg = chatbox.getText().toString().trim();
@@ -97,37 +100,46 @@ public class Chat_activity extends AppCompatActivity {
         map.put("receiverUid", otherUserId);
         map.put("text", msg);
         map.put("imageUrl", "");
+        map.put("videoUrl", "");
         map.put("time", System.currentTimeMillis());
 
-        db.collection("chats")
-                .document(chatId)
-                .collection("messages")
-                .add(map);
+        db.collection("chats").document(chatId)
+                .collection("messages").add(map);
 
         chatbox.setText("");
     }
 
-    // ================= SEND IMAGE =================
+    // ================= IMAGE =================
     private void sendImageMessage(String imageUrl) {
-
-        String msg = chatbox.getText().toString().trim();
 
         Map<String, Object> map = new HashMap<>();
         map.put("senderUid", myUid);
         map.put("receiverUid", otherUserId);
-        map.put("text", msg.isEmpty() ? "" : msg);
+        map.put("text", "");
         map.put("imageUrl", imageUrl);
+        map.put("videoUrl", "");
         map.put("time", System.currentTimeMillis());
 
-        db.collection("chats")
-                .document(chatId)
-                .collection("messages")
-                .add(map);
-
-        chatbox.setText("");
+        db.collection("chats").document(chatId)
+                .collection("messages").add(map);
     }
 
-    // ================= LISTEN MESSAGES =================
+    // ================= VIDEO =================
+    private void sendVideoMessage(String videoUrl) {
+
+        Map<String, Object> map = new HashMap<>();
+        map.put("senderUid", myUid);
+        map.put("receiverUid", otherUserId);
+        map.put("text", "");
+        map.put("imageUrl", "");
+        map.put("videoUrl", videoUrl);
+        map.put("time", System.currentTimeMillis());
+
+        db.collection("chats").document(chatId)
+                .collection("messages").add(map);
+    }
+
+    // ================= LISTEN =================
     private void listenMessages() {
 
         db.collection("chats")
@@ -144,6 +156,7 @@ public class Chat_activity extends AppCompatActivity {
 
                         String text = doc.getString("text");
                         String imageUrl = doc.getString("imageUrl");
+                        String videoUrl = doc.getString("videoUrl");
                         String senderUid = doc.getString("senderUid");
 
                         View messageView = getLayoutInflater().inflate(
@@ -154,86 +167,92 @@ public class Chat_activity extends AppCompatActivity {
                                 false
                         );
 
-                        TextView txtMessage =
-                                messageView.findViewById(R.id.txtMessage);
-                        ImageView imageMessage =
-                                messageView.findViewById(R.id.imageMessage);
-                        TextView txtTime =
-                                messageView.findViewById(R.id.txtTime);
+                        TextView txtMessage = messageView.findViewById(R.id.txtMessage);
+                        ImageView imageMessage = messageView.findViewById(R.id.imageMessage);
+                        VideoView videoView = messageView.findViewById(R.id.videoMessage);
+                        TextView txtTime = messageView.findViewById(R.id.txtTime);
 
-                        if (txtMessage != null) {
-                            if (text != null && !text.isEmpty()) {
-                                txtMessage.setVisibility(View.VISIBLE);
-                                txtMessage.setText(text);
-                            } else {
-                                txtMessage.setVisibility(View.GONE);
-                            }
+                        if (text != null && !text.isEmpty()) {
+                            txtMessage.setVisibility(View.VISIBLE);
+                            txtMessage.setText(text);
+                        } else {
+                            txtMessage.setVisibility(View.GONE);
                         }
 
-                        if (imageMessage != null) {
-                            if (imageUrl != null && !imageUrl.isEmpty()) {
-                                imageMessage.setVisibility(View.VISIBLE);
-                                Glide.with(this)
-                                        .load(imageUrl)
-                                        .into(imageMessage);
-                            } else {
-                                imageMessage.setVisibility(View.GONE);
-                            }
+                        if (imageUrl != null && !imageUrl.isEmpty()) {
+                            imageMessage.setVisibility(View.VISIBLE);
+                            Glide.with(this).load(imageUrl).into(imageMessage);
+                        } else {
+                            imageMessage.setVisibility(View.GONE);
                         }
 
-                        if (txtTime != null) {
-                            Long timeMillis = doc.getLong("time");
-                            if (timeMillis != null) {
-                                String formattedTime =
-                                        android.text.format.DateFormat
-                                                .format("hh:mm a", timeMillis)
-                                                .toString();
-                                txtTime.setText(formattedTime);
-                            }
+                        if (videoUrl != null && !videoUrl.isEmpty()) {
+
+                            videoView.setVisibility(View.VISIBLE);
+
+                            MediaController mediaController =
+                                    new MediaController(this);
+                            mediaController.setAnchorView(videoView);
+                            videoView.setMediaController(mediaController);
+
+                            videoView.setVideoURI(Uri.parse(videoUrl));
+
+                            videoView.setOnPreparedListener(mp -> {
+                                mp.setLooping(false);
+                                videoView.start();
+                            });
+
+                        } else {
+                            videoView.setVisibility(View.GONE);
                         }
 
-                        // ===== LONG PRESS DELETE FEATURE ADDED =====
+                        Long timeMillis = doc.getLong("time");
+                        if (timeMillis != null) {
+                            txtTime.setText(android.text.format.DateFormat
+                                    .format("hh:mm a", timeMillis));
+                        }
+
+                        // DELETE
                         messageView.setOnLongClickListener(v -> {
 
                             if (senderUid != null && senderUid.equals(myUid)) {
 
                                 new AlertDialog.Builder(Chat_activity.this)
                                         .setTitle("Delete Message")
-                                        .setMessage("Do you want to delete this message?")
-                                        .setPositiveButton("Delete", (dialog, which) -> {
-
-                                            doc.getReference().delete();
-
-                                        })
+                                        .setMessage("Delete this message?")
+                                        .setPositiveButton("Delete",
+                                                (d, w) -> doc.getReference().delete())
                                         .setNegativeButton("Cancel", null)
                                         .show();
                             }
-
                             return true;
                         });
-                        // ===== END DELETE FEATURE =====
 
                         chatContainer.addView(messageView);
                     }
 
-                    chatContainer.postDelayed(() -> {
-                        scrollView.fullScroll(View.FOCUS_DOWN);
-                    }, 200);
+                    scrollView.post(() -> scrollView.fullScroll(View.FOCUS_DOWN));
                 });
     }
 
-    // (Remaining code unchanged — your image picker & upload remains same)
+    // ================= PICKER =================
+    private void showPickerDialog() {
 
-    // ================= IMAGE PICKER =================
-    private void showImagePickerDialog() {
-
-        String[] options = {"Camera", "Gallery"};
+        String[] options = {
+                "Photo Camera",
+                "Gallery Image",
+                "Video Camera",
+                "Video Gallery"
+        };
 
         new AlertDialog.Builder(this)
-                .setTitle("Select Image")
+                .setTitle("Select")
                 .setItems(options, (dialog, which) -> {
+
                     if (which == 0) openCamera();
-                    else openGallery();
+                    else if (which == 1) openGallery();
+                    else if (which == 2) openVideoCamera();
+                    else openVideoGallery();
                 })
                 .show();
     }
@@ -242,6 +261,18 @@ public class Chat_activity extends AppCompatActivity {
         Intent intent = new Intent(Intent.ACTION_PICK,
                 MediaStore.Images.Media.EXTERNAL_CONTENT_URI);
         startActivityForResult(intent, GALLERY_REQ);
+    }
+
+    private void openVideoGallery() {
+        Intent intent = new Intent(Intent.ACTION_PICK);
+        intent.setType("video/*");
+        startActivityForResult(intent, VIDEO_GALLERY_REQ);
+    }
+
+    private void openVideoCamera() {
+        Intent intent = new Intent(MediaStore.ACTION_VIDEO_CAPTURE);
+        intent.putExtra(MediaStore.EXTRA_DURATION_LIMIT, 30);
+        startActivityForResult(intent, VIDEO_CAMERA_REQ);
     }
 
     private void openCamera() {
@@ -267,71 +298,57 @@ public class Chat_activity extends AppCompatActivity {
     }
 
     @Override
-    public void onRequestPermissionsResult(int requestCode,
-                                           @NonNull String[] permissions,
-                                           @NonNull int[] grantResults) {
-        super.onRequestPermissionsResult(requestCode, permissions, grantResults);
-
-        if (requestCode == CAMERA_PERMISSION_CODE
-                && grantResults.length > 0
-                && grantResults[0] == PackageManager.PERMISSION_GRANTED) {
-
-            openCamera();
-        }
-    }
-
-    @Override
     protected void onActivityResult(int requestCode, int resultCode,
                                     @Nullable Intent data) {
         super.onActivityResult(requestCode, resultCode, data);
 
         if (resultCode != RESULT_OK) return;
 
-        if (requestCode == GALLERY_REQ && data != null) {
-            uploadToCloudinary(data.getData());
-        }
+        if (requestCode == GALLERY_REQ && data != null)
+            uploadToCloudinary(data.getData(), "image");
 
-        if (requestCode == CAMERA_REQ && cameraImageUri != null) {
-            uploadToCloudinary(cameraImageUri);
-        }
+        if (requestCode == VIDEO_GALLERY_REQ && data != null)
+            uploadToCloudinary(data.getData(), "video");
+
+        if (requestCode == VIDEO_CAMERA_REQ && data != null)
+            uploadToCloudinary(data.getData(), "video");
+
+        if (requestCode == CAMERA_REQ && cameraImageUri != null)
+            uploadToCloudinary(cameraImageUri, "image");
     }
 
-    // (Cloudinary upload code same as yours)
-    private void uploadToCloudinary(Uri imageUri) {
-
-        if (progressBar != null)
-            progressBar.setVisibility(View.VISIBLE);
+    // ================= UPLOAD =================
+    private void uploadToCloudinary(Uri uri, String type) {
 
         OkHttpClient client = new OkHttpClient();
 
         try {
             InputStream inputStream =
-                    getContentResolver().openInputStream(imageUri);
+                    getContentResolver().openInputStream(uri);
             byte[] bytes = readBytes(inputStream);
 
             RequestBody body = new MultipartBody.Builder()
                     .setType(MultipartBody.FORM)
-                    .addFormDataPart("file", "image.jpg",
+                    .addFormDataPart("file",
+                            type.equals("video") ? "video.mp4" : "image.jpg",
                             RequestBody.create(bytes,
-                                    MediaType.parse("image/*")))
+                                    MediaType.parse(type + "/*")))
                     .addFormDataPart("upload_preset", UPLOAD_PRESET)
                     .build();
 
+            String uploadUrl = type.equals("video")
+                    ? "https://api.cloudinary.com/v1_1/" + CLOUD_NAME + "/video/upload"
+                    : "https://api.cloudinary.com/v1_1/" + CLOUD_NAME + "/image/upload";
+
             Request request = new Request.Builder()
-                    .url("https://api.cloudinary.com/v1_1/" +
-                            CLOUD_NAME + "/image/upload")
+                    .url(uploadUrl)
                     .post(body)
                     .build();
 
             client.newCall(request).enqueue(new Callback() {
 
                 @Override
-                public void onFailure(Call call, java.io.IOException e) {
-                    runOnUiThread(() -> {
-                        if (progressBar != null)
-                            progressBar.setVisibility(View.GONE);
-                    });
-                }
+                public void onFailure(Call call, java.io.IOException e) {}
 
                 @Override
                 public void onResponse(Call call, Response response)
@@ -340,28 +357,24 @@ public class Chat_activity extends AppCompatActivity {
                     try {
                         JSONObject json =
                                 new JSONObject(response.body().string());
-                        String imageUrl =
-                                json.getString("secure_url");
+                        String url = json.getString("secure_url");
 
                         runOnUiThread(() -> {
-                            if (progressBar != null)
-                                progressBar.setVisibility(View.GONE);
-                            sendImageMessage(imageUrl);
+                            if (type.equals("video"))
+                                sendVideoMessage(url);
+                            else
+                                sendImageMessage(url);
                         });
 
                     } catch (Exception ignored) {}
                 }
             });
 
-        } catch (Exception e) {
-            if (progressBar != null)
-                progressBar.setVisibility(View.GONE);
-        }
+        } catch (Exception ignored) {}
     }
 
     private byte[] readBytes(InputStream is) throws Exception {
-        ByteArrayOutputStream buffer =
-                new ByteArrayOutputStream();
+        ByteArrayOutputStream buffer = new ByteArrayOutputStream();
         byte[] data = new byte[16384];
         int n;
         while ((n = is.read(data)) != -1)
