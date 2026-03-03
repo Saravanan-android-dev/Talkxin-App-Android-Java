@@ -29,7 +29,7 @@ import java.util.Map;
 
 import okhttp3.*;
 
-public class Chat_activity extends AppCompatActivity {
+public class MainActivity2 extends AppCompatActivity {
 
     TextView txtChatUser;
     EditText chatbox;
@@ -192,27 +192,6 @@ public class Chat_activity extends AppCompatActivity {
                             }
                         }
 
-                        // ===== LONG PRESS DELETE FEATURE ADDED =====
-                        messageView.setOnLongClickListener(v -> {
-
-                            if (senderUid != null && senderUid.equals(myUid)) {
-
-                                new AlertDialog.Builder(Chat_activity.this)
-                                        .setTitle("Delete Message")
-                                        .setMessage("Do you want to delete this message?")
-                                        .setPositiveButton("Delete", (dialog, which) -> {
-
-                                            doc.getReference().delete();
-
-                                        })
-                                        .setNegativeButton("Cancel", null)
-                                        .show();
-                            }
-
-                            return true;
-                        });
-                        // ===== END DELETE FEATURE =====
-
                         chatContainer.addView(messageView);
                     }
 
@@ -221,8 +200,6 @@ public class Chat_activity extends AppCompatActivity {
                     }, 200);
                 });
     }
-
-    // (Remaining code unchanged — your image picker & upload remains same)
 
     // ================= IMAGE PICKER =================
     private void showImagePickerDialog() {
@@ -238,12 +215,14 @@ public class Chat_activity extends AppCompatActivity {
                 .show();
     }
 
+    // ================= OPEN GALLERY =================
     private void openGallery() {
         Intent intent = new Intent(Intent.ACTION_PICK,
                 MediaStore.Images.Media.EXTERNAL_CONTENT_URI);
         startActivityForResult(intent, GALLERY_REQ);
     }
 
+    // ================= OPEN CAMERA =================
     private void openCamera() {
 
         if (checkSelfPermission(Manifest.permission.CAMERA)
@@ -296,7 +275,7 @@ public class Chat_activity extends AppCompatActivity {
         }
     }
 
-    // (Cloudinary upload code same as yours)
+    // ================= UPLOAD TO CLOUDINARY =================
     private void uploadToCloudinary(Uri imageUri) {
 
         if (progressBar != null)

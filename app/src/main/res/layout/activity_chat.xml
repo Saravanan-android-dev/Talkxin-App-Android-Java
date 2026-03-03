@@ -1,82 +1,140 @@
 <?xml version="1.0" encoding="utf-8"?>
-<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+
+<LinearLayout
+    xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    android:id="@+id/rootLayout"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
-    xmlns:app="http://schemas.android.com/apk/res-auto"
     android:orientation="vertical"
+    android:background="#ECE5DD"
     android:fitsSystemWindows="true">
 
-
+    <!-- TOP TOOLBAR -->
     <androidx.appcompat.widget.Toolbar
         android:id="@+id/userbar"
         android:layout_width="match_parent"
-        android:layout_height="wrap_content"
-        android:background="?attr/colorPrimary"
-        android:theme="@style/ThemeOverlay.AppCompat.Dark.ActionBar"
-        app:title="Profile"/>
+        android:layout_height="56dp"
+        android:background="#075E54"
+        android:theme="@style/ThemeOverlay.AppCompat.Dark.ActionBar">
 
-    <!-- Top : Username -->
-    <TextView
-        android:id="@+id/txtChatUser"
-        android:layout_width="wrap_content"
-        android:layout_height="wrap_content"
-        android:text="Username"
-        android:textSize="18sp"
-        android:textStyle="bold"
-        android:padding="8dp"/>
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="match_parent"
+            android:orientation="horizontal"
+            android:gravity="center_vertical"
+            android:paddingStart="8dp"
+            android:paddingEnd="8dp">
 
-    <!-- Online / Last seen -->
-    <TextView
-        android:id="@+id/txtStatus"
-        android:layout_width="wrap_content"
-        android:layout_height="wrap_content"
-        android:text="Online"
-        android:textSize="12sp"
-        android:textColor="#4CAF50"
-        android:paddingStart="8dp"
-        android:paddingBottom="6dp"/>
+            <!-- Profile Image -->
+            <ImageView
+                android:id="@+id/profileImage"
+                android:layout_width="40dp"
+                android:layout_height="40dp"
+                android:src="@drawable/logo"
+                android:scaleType="centerCrop"/>
 
+            <!-- Name + Status -->
+            <LinearLayout
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_weight="1"
+                android:orientation="vertical"
+                android:layout_marginStart="10dp">
 
-    <ImageButton
-        android:id="@+id/audiocall"
-        android:layout_width="wrap_content"
-        android:layout_height="wrap_content"
-        android:src="@drawable/baseline_call_24"
-        />
-    <ImageButton
-        android:id="@+id/video_call"
-        android:layout_width="wrap_content"
-        android:layout_height="wrap_content"
-        android:src="@drawable/baseline_videocam_24"
-        />
+                <TextView
+                    android:id="@+id/txtChatUser"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="Username"
+                    android:textColor="#FFFFFF"
+                    android:textStyle="bold"
+                    android:textSize="16sp"/>
 
-    <ScrollView android:layout_width="match_parent" android:id="@+id/scroll"
-        android:layout_height="0dp" android:layout_weight="1"> <LinearLayout android:id="@+id/chatContainer" android:layout_width="match_parent" android:layout_height="wrap_content" android:orientation="vertical"/> </ScrollView>
+                <TextView
+                    android:id="@+id/txtStatus"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="Online"
+                    android:textColor="#C8E6C9"
+                    android:textSize="12sp"/>
+            </LinearLayout>
+
+            <!-- Call Buttons -->
+            <ImageButton
+                android:id="@+id/audiocall"
+                android:layout_width="40dp"
+                android:layout_height="40dp"
+                android:background="@android:color/transparent"
+                android:src="@drawable/baseline_call_24"
+                android:tint="#FFFFFF"/>
+
+            <ImageButton
+                android:id="@+id/video_call"
+                android:layout_width="40dp"
+                android:layout_height="40dp"
+                android:background="@android:color/transparent"
+                android:src="@drawable/baseline_videocam_24"
+                android:tint="#FFFFFF"/>
+        </LinearLayout>
+
+    </androidx.appcompat.widget.Toolbar>
+
+    <!-- CHAT AREA -->
+    <ScrollView
+        android:id="@+id/scroll"
+        android:layout_width="match_parent"
+        android:layout_height="0dp"
+        android:layout_weight="1"
+        android:fillViewport="true"
+        android:padding="8dp">
+
+        <LinearLayout
+            android:id="@+id/chatContainer"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="vertical"/>
+    </ScrollView>
+
+    <!-- MESSAGE INPUT AREA -->
     <LinearLayout
+        android:id="@+id/bottomLayout"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
+        android:background="#FFFFFF"
+        android:padding="6dp"
         android:orientation="horizontal"
-        android:padding="8dp">
+        android:gravity="center_vertical"
+        android:elevation="4dp">
+        <ImageButton
+            android:id="@+id/attachBtn"
+            android:layout_width="45dp"
+            android:layout_height="45dp"
+            android:background="@android:color/transparent"
+            android:src="@drawable/baseline_done_all_24"
+            android:tint="#075E54"
+            android:layout_marginEnd="6dp"/>
 
         <EditText
             android:id="@+id/chatbox"
             android:layout_width="0dp"
-            android:layout_height="48dp"
+            android:layout_height="45dp"
             android:layout_weight="1"
-            android:hint="Type here"
-            android:background="#F1F1F1"
+            android:hint="Type a message"
+            android:background="@drawable/bg_message_box"
             android:paddingStart="16dp"
             android:paddingEnd="16dp"
-            android:textSize="16sp"
-            />
-        
-        <Button
+            android:textSize="15sp"
+            android:maxLines="4"
+            android:scrollbars="vertical"/>
+
+        <ImageButton
             android:id="@+id/sendbutton"
-            android:layout_width="wrap_content"
-            android:layout_height="48dp"
-            android:text="Send"/>
+            android:layout_width="45dp"
+            android:layout_height="45dp"
+            android:background="#25D366"
+            android:layout_marginStart="6dp"
+            />
     </LinearLayout>
-
-
 
 </LinearLayout>

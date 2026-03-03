@@ -26,10 +26,10 @@
         android:theme="@style/Theme.Chatapplication"
         tools:targetApi="31">
         <activity
-            android:name=".AudiocallActivity"
+            android:name=".MainActivity2"
             android:exported="false" />
         <activity
-            android:name=".MainActivity2"
+            android:name=".AudiocallActivity"
             android:exported="false" />
         <activity
             android:name=".Learnigdrawer"
