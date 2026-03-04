@@ -4,6 +4,7 @@ import android.Manifest;
 import android.content.ContentValues;
 import android.content.Intent;
 import android.content.pm.PackageManager;
+import android.media.MediaPlayer;
 import android.net.Uri;
 import android.os.Bundle;
 import android.provider.MediaStore;
@@ -45,7 +46,8 @@ public class MainActivity2 extends AppCompatActivity {
 
     static final int GALLERY_REQ = 201;
     static final int CAMERA_REQ = 202;
-    static final int VIDEO_REQ = 203;
+    static final int VIDEO_GALLERY_REQ = 203;
+    static final int VIDEO_CAMERA_REQ = 204;
     static final int CAMERA_PERMISSION_CODE = 101;
 
     Uri cameraImageUri;
@@ -87,7 +89,7 @@ public class MainActivity2 extends AppCompatActivity {
         listenMessages();
     }
 
-    // ================= SEND TEXT =================
+    // ================= TEXT =================
     private void sendMessage() {
 
         String msg = chatbox.getText().toString().trim();
@@ -101,15 +103,13 @@ public class MainActivity2 extends AppCompatActivity {
         map.put("videoUrl", "");
         map.put("time", System.currentTimeMillis());
 
-        db.collection("chats")
-                .document(chatId)
-                .collection("messages")
-                .add(map);
+        db.collection("chats").document(chatId)
+                .collection("messages").add(map);
 
         chatbox.setText("");
     }
 
-    // ================= SEND IMAGE =================
+    // ================= IMAGE =================
     private void sendImageMessage(String imageUrl) {
 
         Map<String, Object> map = new HashMap<>();
@@ -120,13 +120,11 @@ public class MainActivity2 extends AppCompatActivity {
         map.put("videoUrl", "");
         map.put("time", System.currentTimeMillis());
 
-        db.collection("chats")
-                .document(chatId)
-                .collection("messages")
-                .add(map);
+        db.collection("chats").document(chatId)
+                .collection("messages").add(map);
     }
 
-    // ================= SEND VIDEO =================
+    // ================= VIDEO =================
     private void sendVideoMessage(String videoUrl) {
 
         Map<String, Object> map = new HashMap<>();
@@ -137,13 +135,11 @@ public class MainActivity2 extends AppCompatActivity {
         map.put("videoUrl", videoUrl);
         map.put("time", System.currentTimeMillis());
 
-        db.collection("chats")
-                .document(chatId)
-                .collection("messages")
-                .add(map);
+        db.collection("chats").document(chatId)
+                .collection("messages").add(map);
     }
 
-    // ================= LISTEN MESSAGES =================
+    // ================= LISTEN =================
     private void listenMessages() {
 
         db.collection("chats")
@@ -191,24 +187,32 @@ public class MainActivity2 extends AppCompatActivity {
                         }
 
                         if (videoUrl != null && !videoUrl.isEmpty()) {
+
                             videoView.setVisibility(View.VISIBLE);
+
+                            MediaController mediaController =
+                                    new MediaController(this);
+                            mediaController.setAnchorView(videoView);
+                            videoView.setMediaController(mediaController);
+
                             videoView.setVideoURI(Uri.parse(videoUrl));
-                            videoView.setOnPreparedListener(mp -> mp.setLooping(true));
-                            videoView.start();
+
+                            videoView.setOnPreparedListener(mp -> {
+                                mp.setLooping(false);
+                                videoView.start();
+                            });
+
                         } else {
                             videoView.setVisibility(View.GONE);
                         }
 
                         Long timeMillis = doc.getLong("time");
                         if (timeMillis != null) {
-                            String formattedTime =
-                                    android.text.format.DateFormat
-                                            .format("hh:mm a", timeMillis)
-                                            .toString();
-                            txtTime.setText(formattedTime);
+                            txtTime.setText(android.text.format.DateFormat
+                                    .format("hh:mm a", timeMillis));
                         }
 
-                        // ===== DELETE FEATURE =====
+                        // DELETE
                         messageView.setOnLongClickListener(v -> {
 
                             if (senderUid != null && senderUid.equals(myUid)) {
@@ -216,8 +220,8 @@ public class MainActivity2 extends AppCompatActivity {
                                 new AlertDialog.Builder(MainActivity2.this)
                                         .setTitle("Delete Message")
                                         .setMessage("Delete this message?")
-                                        .setPositiveButton("Delete", (d, w) ->
-                                                doc.getReference().delete())
+                                        .setPositiveButton("Delete",
+                                                (d, w) -> doc.getReference().delete())
                                         .setNegativeButton("Cancel", null)
                                         .show();
                             }
@@ -234,14 +238,21 @@ public class MainActivity2 extends AppCompatActivity {
     // ================= PICKER =================
     private void showPickerDialog() {
 
-        String[] options = {"Camera", "Gallery", "Video"};
+        String[] options = {
+                "Photo Camera",
+                "Gallery Image",
+                "Video Camera",
+                "Video Gallery"
+        };
 
         new AlertDialog.Builder(this)
                 .setTitle("Select")
                 .setItems(options, (dialog, which) -> {
+
                     if (which == 0) openCamera();
                     else if (which == 1) openGallery();
-                    else openVideoPicker();
+                    else if (which == 2) openVideoCamera();
+                    else openVideoGallery();
                 })
                 .show();
     }
@@ -252,12 +263,29 @@ public class MainActivity2 extends AppCompatActivity {
         startActivityForResult(intent, GALLERY_REQ);
     }
 
-    private void openVideoPicker() {
+    private void openVideoGallery() {
         Intent intent = new Intent(Intent.ACTION_PICK);
         intent.setType("video/*");
-        startActivityForResult(intent, VIDEO_REQ);
+        startActivityForResult(intent, VIDEO_GALLERY_REQ);
     }
 
+    private void openVideoCamera() {
+
+        if (checkSelfPermission(Manifest.permission.CAMERA)
+                != PackageManager.PERMISSION_GRANTED) {
+
+            requestPermissions(
+                    new String[]{Manifest.permission.CAMERA},
+                    CAMERA_PERMISSION_CODE);
+            return;
+        }
+
+        Intent intent = new Intent(MediaStore.ACTION_VIDEO_CAPTURE);
+        intent.putExtra(MediaStore.EXTRA_DURATION_LIMIT, 30);
+        intent.putExtra(MediaStore.EXTRA_VIDEO_QUALITY, 1);
+
+        startActivityForResult(intent, VIDEO_CAMERA_REQ);
+    }
     private void openCamera() {
 
         if (checkSelfPermission(Manifest.permission.CAMERA)
@@ -281,22 +309,38 @@ public class MainActivity2 extends AppCompatActivity {
     }
 
     @Override
-    protected void onActivityResult(int requestCode, int resultCode,
-                                    @Nullable Intent data) {
+    protected void onActivityResult(int requestCode, int resultCode, @Nullable Intent data) {
         super.onActivityResult(requestCode, resultCode, data);
 
         if (resultCode != RESULT_OK) return;
 
-        if (requestCode == GALLERY_REQ && data != null)
+        if (requestCode == GALLERY_REQ && data != null) {
             uploadToCloudinary(data.getData(), "image");
+        }
 
-        if (requestCode == CAMERA_REQ && cameraImageUri != null)
-            uploadToCloudinary(cameraImageUri, "image");
-
-        if (requestCode == VIDEO_REQ && data != null)
+        else if (requestCode == VIDEO_GALLERY_REQ && data != null) {
             uploadToCloudinary(data.getData(), "video");
-    }
+        }
 
+        else if (requestCode == VIDEO_CAMERA_REQ) {
+
+            Uri videoUri = null;
+
+            if (data != null && data.getData() != null) {
+                videoUri = data.getData();
+            }
+
+            if (videoUri != null) {
+                uploadToCloudinary(videoUri, "video");
+            } else {
+                Toast.makeText(this, "Video capture failed", Toast.LENGTH_SHORT).show();
+            }
+        }
+
+        else if (requestCode == CAMERA_REQ && cameraImageUri != null) {
+            uploadToCloudinary(cameraImageUri, "image");
+        }
+    }
     // ================= UPLOAD =================
     private void uploadToCloudinary(Uri uri, String type) {
 

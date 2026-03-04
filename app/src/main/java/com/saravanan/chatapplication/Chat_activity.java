@@ -89,7 +89,6 @@ public class Chat_activity extends AppCompatActivity {
         listenMessages();
     }
 
-    // ================= TEXT =================
     private void sendMessage() {
 
         String msg = chatbox.getText().toString().trim();
@@ -109,7 +108,6 @@ public class Chat_activity extends AppCompatActivity {
         chatbox.setText("");
     }
 
-    // ================= IMAGE =================
     private void sendImageMessage(String imageUrl) {
 
         Map<String, Object> map = new HashMap<>();
@@ -124,7 +122,6 @@ public class Chat_activity extends AppCompatActivity {
                 .collection("messages").add(map);
     }
 
-    // ================= VIDEO =================
     private void sendVideoMessage(String videoUrl) {
 
         Map<String, Object> map = new HashMap<>();
@@ -139,7 +136,6 @@ public class Chat_activity extends AppCompatActivity {
                 .collection("messages").add(map);
     }
 
-    // ================= LISTEN =================
     private void listenMessages() {
 
         db.collection("chats")
@@ -195,7 +191,7 @@ public class Chat_activity extends AppCompatActivity {
                             mediaController.setAnchorView(videoView);
                             videoView.setMediaController(mediaController);
 
-                            videoView.setVideoURI(Uri.parse(videoUrl));
+                            videoView.setVideoPath(videoUrl);
 
                             videoView.setOnPreparedListener(mp -> {
                                 mp.setLooping(false);
@@ -212,7 +208,6 @@ public class Chat_activity extends AppCompatActivity {
                                     .format("hh:mm a", timeMillis));
                         }
 
-                        // DELETE
                         messageView.setOnLongClickListener(v -> {
 
                             if (senderUid != null && senderUid.equals(myUid)) {
@@ -235,7 +230,6 @@ public class Chat_activity extends AppCompatActivity {
                 });
     }
 
-    // ================= PICKER =================
     private void showPickerDialog() {
 
         String[] options = {
@@ -270,8 +264,20 @@ public class Chat_activity extends AppCompatActivity {
     }
 
     private void openVideoCamera() {
+
+        if (checkSelfPermission(Manifest.permission.CAMERA)
+                != PackageManager.PERMISSION_GRANTED) {
+
+            requestPermissions(
+                    new String[]{Manifest.permission.CAMERA},
+                    CAMERA_PERMISSION_CODE);
+            return;
+        }
+
         Intent intent = new Intent(MediaStore.ACTION_VIDEO_CAPTURE);
         intent.putExtra(MediaStore.EXTRA_DURATION_LIMIT, 30);
+        intent.putExtra(MediaStore.EXTRA_VIDEO_QUALITY, 1);
+
         startActivityForResult(intent, VIDEO_CAMERA_REQ);
     }
 
@@ -298,26 +304,39 @@ public class Chat_activity extends AppCompatActivity {
     }
 
     @Override
-    protected void onActivityResult(int requestCode, int resultCode,
-                                    @Nullable Intent data) {
+    protected void onActivityResult(int requestCode, int resultCode, @Nullable Intent data) {
         super.onActivityResult(requestCode, resultCode, data);
 
         if (resultCode != RESULT_OK) return;
 
-        if (requestCode == GALLERY_REQ && data != null)
+        if (requestCode == GALLERY_REQ && data != null) {
             uploadToCloudinary(data.getData(), "image");
+        }
 
-        if (requestCode == VIDEO_GALLERY_REQ && data != null)
+        else if (requestCode == VIDEO_GALLERY_REQ && data != null) {
             uploadToCloudinary(data.getData(), "video");
+        }
 
-        if (requestCode == VIDEO_CAMERA_REQ && data != null)
-            uploadToCloudinary(data.getData(), "video");
+        else if (requestCode == VIDEO_CAMERA_REQ) {
 
-        if (requestCode == CAMERA_REQ && cameraImageUri != null)
+            Uri videoUri = null;
+
+            if (data != null && data.getData() != null) {
+                videoUri = data.getData();
+            }
+
+            if (videoUri != null) {
+                uploadToCloudinary(videoUri, "video");
+            } else {
+                Toast.makeText(this, "Video capture failed", Toast.LENGTH_SHORT).show();
+            }
+        }
+
+        else if (requestCode == CAMERA_REQ && cameraImageUri != null) {
             uploadToCloudinary(cameraImageUri, "image");
+        }
     }
 
-    // ================= UPLOAD =================
     private void uploadToCloudinary(Uri uri, String type) {
 
         OkHttpClient client = new OkHttpClient();
